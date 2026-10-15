@@ -1,0 +1,3 @@
+# Build artifacts
+build_pkg/project.gp5
+*.naps_metric.json
