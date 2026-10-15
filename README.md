@@ -17,11 +17,16 @@ Port do jogo **PokéBonk** para PlayStation 5 via WebKit / Browser em tela cheia
 | **D-Pad (Cruzeta)** | Navegação de Menus / Seleção de Upgrades |
 | **Options** | Pausar (`Escape`) |
 
-## Instalação no PS5
+## Modos de Instalação no PS5
 
-1. Copie o arquivo `PokeBonk-PS5.pkg` para a raiz de um pendrive formatado em exFAT.
-2. No PS5 com jailbreak ativo, acesse o **Package Installer** (nas Debug Settings ou via Itemzflow) e instale o PKG.
-3. Inicie o jogo diretamente pela Dashboard do PS5. O navegador WebKit abrirá em tela cheia no jogo já com o DualSense mapeado.
+### Modo 1: Offline (Recomendado - 100% Sem Internet no PS5)
+1. Extraia o conteúdo de `pokebonk-offline-files.zip` para a pasta `/data/pokebonk/` no armazenamento interno do seu PS5 (via FTP, File Manager do etaHEN ou Itemzflow).
+2. Instale o pacote **`PokeBonk-Offline-PS5.pkg`** no PS5 via Package Installer.
+3. Inicie o jogo pela Dashboard. Ele lerá os arquivos diretamente do SSD local em `http://127.0.0.1:8080/pokebonk/`, com carregamento instantâneo, sem internet e com controles do DualSense ativos.
+
+### Modo 2: Online (GitHub Pages)
+1. Instale o arquivo **`PokeBonk-PS5.pkg`** no PS5 via Package Installer.
+2. Inicie o jogo pela Dashboard. Ele abrirá diretamente a versão hospedada no seu GitHub Pages (`https://isrmicha.github.io/pokebonk-ps5/`).
 
 ## Recompilando o PKG
 
