@@ -24,7 +24,7 @@
             stardust: 150,
             totalStardust: 150,
             unlocked: [1, 4, 7, 25],
-            league: [],
+            league: [1, 4, 7],
             starter: 4,
             forms: [],
             research: {},
@@ -173,7 +173,44 @@
                 });
             }
 
-            // 7. Qualquer outro endpoint da API
+            // 7. /leaderboard
+            if (url.includes('/leaderboard')) {
+                return jsonResponse({
+                    info: {
+                        live: true,
+                        n: 1,
+                        name: "GEN 1",
+                        start: 1700000000000,
+                        end: 2000000000000
+                    },
+                    entries: [],
+                    me: null,
+                    clans: 0
+                });
+            }
+
+            // 8. /clans/status
+            if (url.includes('/clans/status')) {
+                return jsonResponse({
+                    clan: null,
+                    mail: 0,
+                    requests: 0
+                });
+            }
+
+            // 9. /seasons/awards
+            if (url.includes('/seasons/awards')) {
+                return jsonResponse({
+                    awards: []
+                });
+            }
+
+            // 10. /friends ou /news
+            if (url.includes('/friends') || url.includes('/news')) {
+                return jsonResponse([]);
+            }
+
+            // 11. Qualquer outro endpoint da API
             return jsonResponse({
                 ok: true,
                 data: [],
