@@ -180,6 +180,7 @@
                         live: true,
                         n: 1,
                         name: "GEN 1",
+                        dust: 1,
                         start: 1700000000000,
                         end: 2000000000000
                     },
