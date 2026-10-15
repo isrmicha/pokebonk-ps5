@@ -176,7 +176,7 @@ Write-Host "8. Aplicando patches do controle DualSense..."
 # Atualizar index.html (remover analytics do Cloudflare e injetar ps5-gamepad.js)
 $cleanIndex = $indexHtml -replace '<script\s+type="module"\s+src="https://static\.cloudflareinsights\.com/[^"]*"[^>]*></script>', ''
 if ($cleanIndex -notmatch 'ps5-gamepad\.js') {
-    $cleanIndex = $cleanIndex -replace '</body>', "    <script defer src=""./ps5-gamepad.js""></script>`n  </body>"
+    $cleanIndex = $cleanIndex -replace '(<script type="module")', "    <script src=""./ps5-gamepad.js""></script>`n    `$1"
 }
 [System.IO.File]::WriteAllText((Join-Path $root "index.html"), $cleanIndex, [System.Text.Encoding]::UTF8)
 

@@ -1,10 +1,194 @@
 /**
- * PokéBonk PS5 DualSense Gamepad Adapter
- * Maps DualSense controller inputs to PokéBonk's internal engine & DOM events.
+ * PokéBonk PS5 DualSense Gamepad Adapter & Local API Interceptor
+ * 1. Intercepts api.pokebonk.com requests to eliminate CORS and enable 100% offline saves
+ * 2. Maps DualSense controller inputs to PokéBonk's internal engine & DOM events
  */
 (function () {
     'use strict';
 
+    // ==========================================
+    // 1. API INTERCEPTOR (Elimina erro de CORS)
+    // ==========================================
+    const STORAGE_KEY = 'pb_ps5_profile';
+
+    function getLocalProfile() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+
+        const initial = {
+            v: 1,
+            name: "Treinador PS5",
+            created: Date.now(),
+            stardust: 150,
+            totalStardust: 150,
+            unlocked: [1, 4, 7, 25],
+            league: [],
+            starter: 4,
+            forms: [],
+            research: {},
+            captured: {},
+            seen: [1, 4, 7, 25],
+            shinies: [],
+            skins: [],
+            lab: {},
+            biomes: { forest: 0 },
+            quests: {},
+            counters: {},
+            runs: [],
+            best: {},
+            times: {},
+            kills: {},
+            medals: {},
+            endless: {},
+            settings: {
+                autoAttack: true,
+                bgMusic: true,
+                sfx: true,
+                screenShake: true,
+                damageNumbers: true
+            },
+            lastSpecies: 4,
+            lastBiome: "forest",
+            banished: [],
+            itemsOwned: [],
+            itemsOff: [],
+            daily: {},
+            weekly: {},
+            dailyStreak: {}
+        };
+        saveLocalProfile(initial);
+        return initial;
+    }
+
+    function saveLocalProfile(profile) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+        } catch (e) {}
+    }
+
+    function jsonResponse(data, status = 200) {
+        return new Response(JSON.stringify(data), {
+            status: status,
+            statusText: "OK",
+            headers: {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            }
+        });
+    }
+
+    const originalFetch = window.fetch;
+    window.fetch = async function (resource, options = {}) {
+        const url = typeof resource === 'string' ? resource : (resource?.url || '');
+
+        if (url.includes('api.pokebonk.com')) {
+            const method = (options.method || 'GET').toUpperCase();
+
+            // 1. /status
+            if (url.includes('/status')) {
+                return jsonResponse({
+                    maintenance: { on: false, title: "", message: "", eta: 0 },
+                    bypass: false,
+                    season: {
+                        n: 1,
+                        name: "GEN 1",
+                        start: 1700000000000,
+                        end: 2000000000000,
+                        live: true,
+                        dust: 1,
+                        message: ""
+                    },
+                    registration: { inviteOnly: false }
+                });
+            }
+
+            // 2. /auth/guest, /auth/me, /auth/login, /auth/register
+            if (url.includes('/auth/')) {
+                return jsonResponse({
+                    guest: true,
+                    id: "ps5_trainer",
+                    name: "Treinador PS5",
+                    token: "ps5_local_token",
+                    created: 1700000000000
+                });
+            }
+
+            // 3. /profile/prefs
+            if (url.includes('/profile/prefs')) {
+                try {
+                    const body = options.body ? JSON.parse(options.body) : {};
+                    const prof = getLocalProfile();
+                    Object.assign(prof, body);
+                    saveLocalProfile(prof);
+                } catch (e) {}
+                return jsonResponse({ ok: true });
+            }
+
+            // 4. /profile/starter
+            if (url.includes('/profile/starter')) {
+                try {
+                    const body = options.body ? JSON.parse(options.body) : {};
+                    const prof = getLocalProfile();
+                    if (body.id) prof.starter = body.id;
+                    saveLocalProfile(prof);
+                } catch (e) {}
+                return jsonResponse({ ok: true });
+            }
+
+            // 5. /profile
+            if (url.includes('/profile')) {
+                const prof = getLocalProfile();
+                return jsonResponse({ profile: prof });
+            }
+
+            // 6. /runs
+            if (url.includes('/runs')) {
+                if (url.includes('/finish')) {
+                    try {
+                        const body = options.body ? JSON.parse(options.body) : {};
+                        const prof = getLocalProfile();
+                        if (body.result) {
+                            prof.runs = prof.runs || [];
+                            prof.runs.push({
+                                date: Date.now(),
+                                score: body.result.score || 0,
+                                kills: body.result.kills || 0,
+                                win: !!body.result.win
+                            });
+                            prof.stardust = (prof.stardust || 0) + (body.result.stardust || 50);
+                            saveLocalProfile(prof);
+                        }
+                    } catch (e) {}
+                    return jsonResponse({ ok: true });
+                }
+                // Iniciar run
+                return jsonResponse({
+                    id: "ps5_run_" + Date.now(),
+                    seed: Math.floor(Math.random() * 1e9),
+                    ranked: false,
+                    offline: false,
+                    ticket: { id: "ps5_run_" + Date.now() }
+                });
+            }
+
+            // 7. Qualquer outro endpoint da API
+            return jsonResponse({
+                ok: true,
+                data: [],
+                players: [],
+                clans: [],
+                news: []
+            });
+        }
+
+        return originalFetch.apply(this, arguments);
+    };
+
+    // ==========================================
+    // 2. CONTROLES DUALSENSE (PS5)
+    // ==========================================
     const DEADZONE = 0.22;
     const CAM_SENSITIVITY = 14; // Sensibilidade de giro da câmera no analógico direito
     const REPEAT_DELAY = 300;   // Delay inicial de repetição do D-Pad (ms)
@@ -67,10 +251,6 @@
             case 'ArrowDown': return 40;
             case 'ArrowLeft': return 37;
             case 'ArrowRight': return 39;
-            case 'Enter': return 13;
-            case 'Digit1': return 49;
-            case 'Digit2': return 50;
-            case 'Digit3': return 51;
             default: return 0;
         }
     }
@@ -97,7 +277,6 @@
         emitKey(code, key, true);
         setTimeout(() => emitKey(code, key, false), 40);
 
-        // Se houver opções de upgrade na tela, D-Pad seleciona os cards
         const choices = document.querySelectorAll('.choice-card, .level-up-option, button.choice');
         if (choices.length > 0) {
             const active = document.activeElement;
@@ -136,7 +315,6 @@
                     input.stickY = -normY * scale;
                 }
 
-                // Emissão de WASD como fallback
                 emitKey('KeyW', 'w', ly < -DEADZONE);
                 emitKey('KeyS', 's', ly > DEADZONE);
                 emitKey('KeyA', 'a', lx < -DEADZONE);
@@ -161,7 +339,7 @@
                 const dy = (Math.abs(ry) > DEADZONE ? ry : 0) * CAM_SENSITIVITY;
 
                 if (input && typeof input.look === 'function') {
-                    input.locked = true; // Garante que a câmera aceita movimento
+                    input.locked = true;
                     input.look(dx, dy);
                 } else {
                     const canvas = document.getElementById('game') || window;
@@ -227,16 +405,14 @@
         requestAnimationFrame(pollController);
     }
 
-    // Previne a navegação de página acidental no PS5
     history.pushState(null, document.title, location.href);
     window.addEventListener('popstate', function () {
         history.pushState(null, document.title, location.href);
     });
 
-    // Inicia polling quando o controle conecta ou na primeira interação
     window.addEventListener('gamepadconnected', () => requestAnimationFrame(pollController));
     window.addEventListener('click', () => requestAnimationFrame(pollController), { once: true });
     requestAnimationFrame(pollController);
 
-    console.log('[PS5] DualSense Gamepad Adapter ativo para PokéBonk.');
+    console.log('[PS5] PokéBonk DualSense & API Interceptor ativo.');
 })();
