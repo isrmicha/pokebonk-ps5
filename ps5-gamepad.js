@@ -79,12 +79,12 @@
         });
     }
 
-    const originalFetch = window.fetch;
-    window.fetch = async function (resource, options = {}) {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async function (resource, options) {
         const url = typeof resource === 'string' ? resource : (resource?.url || '');
 
         if (url.includes('api.pokebonk.com')) {
-            const method = (options.method || 'GET').toUpperCase();
+            const method = (options?.method || 'GET').toUpperCase();
 
             // 1. /status
             if (url.includes('/status')) {
@@ -183,7 +183,7 @@
             });
         }
 
-        return originalFetch.apply(this, arguments);
+        return originalFetch(resource, options);
     };
 
     // ==========================================
